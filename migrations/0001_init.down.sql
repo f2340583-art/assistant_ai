@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS summary_log;
+DROP TABLE IF EXISTS reminder_log;
+DROP TABLE IF EXISTS tasks;
