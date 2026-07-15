@@ -18,6 +18,7 @@ type Config struct {
 
 	GoogleServiceAccountJSON string // raw JSON content of the service account key
 	GoogleCalendarID         string
+	SpeechLanguageCode       string // BCP-47 code for Google Speech-to-Text, e.g. "uz-UZ"
 
 	AnthropicAPIKey string
 	AnthropicModel  string
@@ -27,6 +28,17 @@ type Config struct {
 	SummaryMinute      int
 	ReminderLeadMin    int
 	ReminderIntervalMn int
+
+	Port      string // HTTP port for the Mini App server; Railway injects PORT itself
+	WebAppURL string // public HTTPS URL of the Mini App; empty disables the Telegram menu button
+
+	BillzSecretToken string // optional: enables the business section of the Mini App dashboard
+
+	// AdminUsername/AdminPassword bootstrap the first browser-login account
+	// when the users table is empty at startup. If unset, a random password
+	// is generated and logged once instead (see cmd/agent/main.go).
+	AdminUsername string
+	AdminPassword string
 }
 
 // Load reads configuration from environment variables, optionally loading a
@@ -37,10 +49,16 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		DatabaseURL:        getEnv("DATABASE_URL", ""),
 		GoogleCalendarID:   getEnv("GOOGLE_CALENDAR_ID", "primary"),
+		SpeechLanguageCode: getEnv("SPEECH_LANGUAGE_CODE", "uz-UZ"),
 		AnthropicModel:     getEnv("ANTHROPIC_MODEL", "claude-sonnet-5"),
 		Timezone:           getEnv("TIMEZONE", "Asia/Tashkent"),
 		ReminderLeadMin:    getEnvInt("REMINDER_LEAD_MINUTES", 30),
 		ReminderIntervalMn: getEnvInt("REMINDER_CHECK_INTERVAL_MINUTES", 15),
+		Port:               getEnv("PORT", "8080"),
+		WebAppURL:          os.Getenv("WEBAPP_URL"),
+		BillzSecretToken:   os.Getenv("BILLZ_SECRET_TOKEN"),
+		AdminUsername:      os.Getenv("ADMIN_USERNAME"),
+		AdminPassword:      os.Getenv("ADMIN_PASSWORD"),
 	}
 
 	cfg.TelegramBotToken = os.Getenv("TELEGRAM_BOT_TOKEN")
@@ -67,10 +85,9 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("ANTHROPIC_API_KEY is required")
 	}
 
+	// Optional: without it the agent runs fine, just without calendar
+	// events/reminders (see calendar client init in main.go).
 	cfg.GoogleServiceAccountJSON = os.Getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
-	if cfg.GoogleServiceAccountJSON == "" {
-		return nil, fmt.Errorf("GOOGLE_SERVICE_ACCOUNT_JSON is required (paste the full JSON key contents)")
-	}
 
 	summaryTime := getEnv("SUMMARY_TIME", "08:00")
 	hour, minute, err := parseHHMM(summaryTime)

@@ -1,0 +1,1140 @@
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg: var(--tg-theme-bg-color, #f4f4f5);
+  --secondary-bg: var(--tg-theme-secondary-bg-color, #ffffff);
+  --text: var(--tg-theme-text-color, #111111);
+  --hint: var(--tg-theme-hint-color, #8e8e93);
+  --link: var(--tg-theme-link-color, #2481cc);
+  --button: var(--tg-theme-button-color, #2481cc);
+  --button-text: var(--tg-theme-button-text-color, #ffffff);
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+
+  /* Signature brand accent — used for anything "active"/"on": hero card,
+     active pill, toggle-on state. Independent of Telegram's theme color so
+     the app keeps a consistent identity in both light and dark mode. */
+  --accent-a: #11998e;
+  --accent-b: #38ef7d;
+  --accent-gradient: linear-gradient(135deg, var(--accent-a), var(--accent-b));
+  --danger: #ef4444;
+
+  /* --tg-safe-top/--tg-safe-bottom are set from JS (Telegram's
+     contentSafeAreaInset/safeAreaInset) — needed in full-screen mode, where
+     Telegram's own floating close button isn't covered by env(). */
+  --safe-top: max(env(safe-area-inset-top, 0px), var(--tg-safe-top, 0px));
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--tg-safe-bottom, 0px));
+}
+
+html, body {
+  height: 100%;
+  overscroll-behavior-y: none;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ---------- Header ---------- */
+
+.app-header {
+  padding: calc(var(--safe-top) + 14px) 20px 14px;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-logout-btn {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--hint);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+.header-logout-btn:active { background: var(--secondary-bg); color: var(--danger); }
+.header-logout-btn svg { width: 17px; height: 17px; }
+
+.today-date {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: capitalize;
+}
+
+/* Shown only on desktop-width layouts (see sidebar media query) — on
+   mobile the bottom tab bar's own labels already convey the current page. */
+.page-title { display: none; margin: 0; }
+
+/* ---------- Content / panels ---------- */
+
+.content {
+  padding: 4px 16px calc(84px + var(--safe-bottom));
+}
+
+.panel { display: none; }
+.panel.active { display: block; animation: fade-in 0.18s ease; }
+
+/* ---------- Sidebar (desktop-width layout) ----------
+   Hidden by default — the phone-shaped bottom tab bar is the mobile nav.
+   Past the breakpoint (desktop Telegram client, or a wide fullscreen
+   Mini App window) the sidebar takes over and the bottom bar hides, so the
+   app reads as a real desktop app rather than a stretched phone screen. */
+
+.sidebar { display: none; }
+
+@media (min-width: 860px) {
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 240px;
+    padding: calc(var(--safe-top) + 16px) 12px 14px;
+    background: var(--secondary-bg);
+    border-right: 1px solid color-mix(in srgb, var(--hint) 16%, transparent);
+    gap: 2px;
+    z-index: 5;
+    transition: width 0.18s ease;
+  }
+
+  .sidebar-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 6px 18px;
+  }
+
+  .sidebar-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+  .sidebar-logo {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    background: var(--accent-gradient);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.2px;
+  }
+
+  .sidebar-brand-text {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sidebar-collapse-btn {
+    flex-shrink: 0;
+    border: none;
+    background: none;
+    color: var(--hint);
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  .sidebar-collapse-btn:hover { background: var(--bg); }
+  .sidebar-collapse-btn svg { width: 15px; height: 15px; }
+
+  .sidebar-nav-group { display: flex; flex-direction: column; gap: 2px; }
+
+  .sidebar-section-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--hint);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 16px 10px 6px;
+  }
+
+  .sidebar-item {
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    gap: 12px;
+    padding: 9px 10px !important;
+    border-radius: 10px;
+    font-size: 13.5px !important;
+    font-weight: 600;
+    color: var(--text);
+    transition: background 0.15s ease;
+  }
+
+  .sidebar-item .tab-icon-wrap { width: 24px; height: 24px; flex-shrink: 0; }
+  .sidebar-item .sidebar-item-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sidebar-item:hover { background: var(--bg); }
+  .sidebar-item.active {
+    background: var(--accent-gradient);
+    color: #fff;
+  }
+  .sidebar-item.active .tab-icon-wrap { background: none; color: #fff; }
+
+  .sidebar-subitem { font-size: 13px !important; }
+
+  .sidebar-spacer { flex: 1; }
+
+  .sidebar-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 12px;
+    border-top: 1px solid color-mix(in srgb, var(--hint) 16%, transparent);
+    margin-top: 8px;
+  }
+
+  .sidebar-avatar {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent-gradient);
+    background-size: cover;
+    background-position: center;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sidebar-profile-info {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar-profile-name {
+    font-size: 13px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sidebar-profile-sub {
+    font-size: 11px;
+    color: var(--hint);
+  }
+
+  .sidebar-logout-btn {
+    flex-shrink: 0;
+    border: none;
+    background: none;
+    color: var(--hint);
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  .sidebar-logout-btn:hover { background: var(--bg); color: var(--danger); }
+  .sidebar-logout-btn svg { width: 15px; height: 15px; }
+
+  .header-logout-btn { display: none; }
+
+  /* Collapsed (icon-only) state — toggled via the chevron button. */
+  body.sidebar-collapsed .sidebar { width: 68px; }
+  body.sidebar-collapsed .sidebar-brand-text,
+  body.sidebar-collapsed .sidebar-section-label,
+  body.sidebar-collapsed .sidebar-item-label,
+  body.sidebar-collapsed .sidebar-profile-info { display: none; }
+  body.sidebar-collapsed .sidebar-top { justify-content: center; }
+  body.sidebar-collapsed .sidebar-collapse-btn { display: none; }
+  body.sidebar-collapsed .sidebar-item { justify-content: center !important; padding: 9px !important; }
+  body.sidebar-collapsed .sidebar-profile { justify-content: center; padding: 10px 0; }
+  body.sidebar-collapsed .app-header { margin-left: 68px; }
+  body.sidebar-collapsed .content { margin-left: 68px; }
+
+  /* !important: the base .tab-bar rule is defined later in this file (its
+     own section) with equal specificity, which would otherwise win on
+     source order regardless of this media query matching. */
+  .tab-bar { display: none !important; }
+
+  .app-header {
+    margin-left: 240px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    transition: margin-left 0.18s ease;
+  }
+
+  .page-title { display: block; font-size: 22px; font-weight: 800; letter-spacing: -0.3px; margin: 0; }
+
+  .content {
+    margin-left: 240px;
+    max-width: 900px;
+    padding: 4px 32px 32px;
+    transition: margin-left 0.18s ease;
+  }
+
+  /* Denser desktop layout: cards that are naturally compact (stat
+     summaries) sit two-up instead of stacking full-width like on a phone.
+     Opt-in per panel via .wide-grid so lists (tasks, store rankings) keep
+     the full-width single column that reads better for rows of text. */
+  .panel.wide-grid.active {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-content: start;
+  }
+  .panel.wide-grid.active > .card,
+  .panel.wide-grid.active > .hero-card { margin: 0; }
+  .panel.wide-grid.active > .full-width { grid-column: 1 / -1; }
+
+  /* VMI pages' pill sub-nav is a mobile affordance — the sidebar already
+     covers navigation on desktop-width layouts. !important: the base
+     .vmi-subnav rule is defined later in this file with equal specificity. */
+  .vmi-subnav { display: none !important; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Hero card ---------- */
+
+.hero-card {
+  background: var(--accent-gradient);
+  border-radius: 22px;
+  padding: 18px 18px 16px;
+  color: #ffffff;
+  box-shadow: 0 10px 24px -10px color-mix(in srgb, var(--accent-a) 65%, transparent);
+  margin: 6px 0 14px;
+}
+
+.hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.hero-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-icon svg { width: 19px; height: 19px; color: #ffffff; }
+
+.hero-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hero-value {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.5px;
+}
+
+.hero-label {
+  font-size: 13px;
+  opacity: 0.85;
+  margin-top: 5px;
+}
+
+.stat-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.stat-chip { flex: 1; min-width: 0; }
+.stat-icon svg { width: 14px; height: 14px; opacity: 0.85; }
+.stat-value {
+  font-size: 13.5px;
+  font-weight: 700;
+  margin-top: 5px;
+  line-height: 1.25;
+  word-break: break-word;
+}
+.stat-label { font-size: 10.5px; opacity: 0.78; margin-top: 1px; }
+
+/* ---------- Cards ---------- */
+
+.card {
+  background: var(--secondary-bg);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: var(--card-shadow);
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.tasks-mini-card {
+  margin-bottom: 14px;
+}
+
+.stock-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 0 14px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--hint) 14%, transparent);
+}
+
+.stock-total-label { font-size: 12.5px; color: var(--hint); }
+.stock-total-value { font-size: 13.5px; font-weight: 700; text-align: right; }
+
+/* ---------- Store ranking list ---------- */
+
+.store-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.store-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.store-name {
+  font-size: 14.5px;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-revenue {
+  font-size: 14.5px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.store-bar-track {
+  height: 6px;
+  border-radius: 4px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.store-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent-gradient);
+}
+
+.store-meta {
+  font-size: 11.5px;
+  color: var(--hint);
+  margin-top: 5px;
+}
+
+.store-list-toggle {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-a);
+  padding: 6px 0 2px;
+  cursor: pointer;
+}
+.store-list-toggle:active { opacity: 0.7; }
+
+/* Desktop-width companion: a real table instead of a stacked card list —
+   there's room for it, and it reads better as a proper desktop app. */
+.store-table-wrap { display: none; }
+
+@media (min-width: 860px) {
+  .store-list { display: none; }
+  .store-table-wrap { display: block; }
+  .store-table tbody tr { cursor: pointer; }
+}
+
+/* ---------- Mini stat row (Vazifalar card, non-gradient) ---------- */
+
+.mini-stat-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mini-stat { flex: 1; min-width: 72px; }
+
+.mini-stat-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--tile-color, var(--accent-a)) 15%, transparent);
+  color: var(--tile-color, var(--accent-a));
+  margin-bottom: 6px;
+}
+
+.mini-stat-icon svg { width: 13px; height: 13px; }
+
+.mini-stat-value {
+  font-size: 14.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.mini-stat-label {
+  font-size: 10.5px;
+  color: var(--hint);
+  margin-top: 1px;
+}
+
+/* ---------- Filter chips (tasks tab) ---------- */
+
+.filter-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 4px;
+  margin-bottom: 14px;
+  scrollbar-width: none;
+}
+
+.filter-row::-webkit-scrollbar { display: none; }
+
+.filter-chip {
+  flex-shrink: 0;
+  border: none;
+  padding: 9px 16px;
+  border-radius: 20px;
+  background: var(--secondary-bg);
+  color: var(--hint);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--card-shadow);
+}
+
+.filter-chip.active {
+  background: var(--accent-gradient);
+  color: #ffffff;
+  box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--accent-a) 65%, transparent);
+}
+
+/* ---------- Task list ---------- */
+
+.task-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--secondary-bg);
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: var(--card-shadow);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.task-item.completing {
+  opacity: 0;
+  transform: scale(0.92) translateX(12px);
+}
+
+.task-icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--accent-a) 15%, transparent);
+  color: var(--accent-a);
+}
+
+.task-icon.overdue {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  color: var(--danger);
+}
+
+.task-icon svg { width: 18px; height: 18px; }
+
+.task-body { flex: 1; min-width: 0; }
+
+.task-desc {
+  font-size: 15px;
+  line-height: 1.35;
+  display: block;
+  word-break: break-word;
+}
+
+.task-due {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  font-size: 11.5px;
+  color: var(--hint);
+}
+
+.task-due svg { width: 12px; height: 12px; }
+.task-due.overdue { color: var(--danger); }
+
+/* ---------- Toggle switch (complete task) ---------- */
+
+.toggle-switch {
+  flex-shrink: 0;
+  width: 46px;
+  height: 27px;
+  border-radius: 999px;
+  border: none;
+  background: color-mix(in srgb, var(--hint) 28%, transparent);
+  position: relative;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s ease;
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toggle-switch.on { background: var(--accent-gradient); }
+.toggle-switch.on .toggle-knob { transform: translateX(19px); }
+
+.empty-state {
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--hint);
+}
+
+.empty-state .emoji { font-size: 40px; display: block; margin-bottom: 10px; }
+.empty-state .msg { font-size: 14px; }
+
+/* ---------- Bottom tab bar ---------- */
+
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  background: var(--secondary-bg);
+  border-top: 1px solid color-mix(in srgb, var(--hint) 20%, transparent);
+  padding: 6px 0 calc(6px + var(--safe-bottom));
+  z-index: 10;
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  border: none;
+  background: none;
+  color: var(--hint);
+  font-size: 11px;
+  padding: 4px 0 2px;
+  cursor: pointer;
+}
+
+.tab-icon-wrap {
+  width: 42px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  transition: background 0.2s ease;
+}
+
+.tab-icon-wrap svg { width: 22px; height: 22px; }
+
+.tab.active { color: var(--accent-a); font-weight: 600; }
+.tab.active .tab-icon-wrap { background: color-mix(in srgb, var(--accent-a) 16%, transparent); }
+
+/* ---------- Bottom sheet (add task) ---------- */
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+  z-index: 20;
+}
+
+.sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--secondary-bg);
+  border-radius: 20px 20px 0 0;
+  padding: 10px 20px calc(24px + var(--safe-bottom));
+  transform: translateY(100%);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  z-index: 21;
+}
+
+.sheet.open { transform: translateY(0); }
+
+.sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--hint);
+  opacity: 0.4;
+  margin: 6px auto 14px;
+}
+
+.sheet h3 { margin: 0 0 14px; font-size: 17px; }
+
+.sheet input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--hint) 30%, transparent);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  margin-bottom: 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sheet input:focus {
+  outline: none;
+  border-color: var(--accent-a);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-a) 20%, transparent);
+}
+
+.due-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--hint);
+}
+
+/* ---------- Tappable store rows (opens store detail panel) ---------- */
+
+.store-item { cursor: pointer; position: relative; }
+.store-item:active { opacity: 0.8; }
+
+.store-row-chevron {
+  color: var(--hint);
+  flex-shrink: 0;
+}
+.store-row-chevron svg { width: 14px; height: 14px; }
+
+/* ---------- Monthly comparison card ---------- */
+
+.monthly-summary {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.monthly-col { display: flex; flex-direction: column; }
+.monthly-label { font-size: 11.5px; color: var(--hint); }
+.monthly-value { font-size: 19px; font-weight: 800; margin-top: 2px; }
+
+.monthly-trend {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--accent-a) 16%, transparent);
+  color: var(--accent-a);
+  margin-left: auto;
+}
+
+.monthly-trend.down {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--danger);
+}
+
+.chart-wrap { width: 100%; max-width: 480px; }
+.chart-wrap svg { display: block; width: 100%; height: auto; }
+
+.chart-empty {
+  text-align: center;
+  color: var(--hint);
+  font-size: 13px;
+  padding: 20px 0;
+}
+
+/* ---------- Forecast card ---------- */
+
+.forecast-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.forecast-value {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+
+.forecast-note {
+  font-size: 12.5px;
+  color: var(--hint);
+  margin-top: 6px;
+}
+
+/* ---------- Category pie chart ---------- */
+
+.category-layout {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.pie-wrap { flex-shrink: 0; width: 108px; height: 108px; }
+.pie-wrap svg { display: block; width: 100%; height: 100%; }
+
+.legend-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 140px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legend-value {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--hint);
+}
+
+/* ---------- VMI status badges ---------- */
+
+.stockout-badge {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.status-out {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  color: var(--danger);
+}
+
+.status-low {
+  background: color-mix(in srgb, #e67e22 16%, transparent);
+  color: #e67e22;
+}
+
+.status-dead {
+  background: color-mix(in srgb, var(--hint) 20%, transparent);
+  color: var(--text);
+}
+
+.status-top {
+  background: color-mix(in srgb, var(--accent-a) 16%, transparent);
+  color: var(--accent-a);
+}
+
+/* ---------- VMI mobile sub-nav pills (Muzlagan / Tugab qolayotgan / Top) ---------- */
+
+.vmi-subnav {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 4px;
+  margin-bottom: 14px;
+  scrollbar-width: none;
+}
+
+.vmi-subnav::-webkit-scrollbar { display: none; }
+
+.vmi-subnav-btn {
+  flex-shrink: 0;
+  border: none;
+  padding: 9px 16px;
+  border-radius: 20px;
+  background: var(--secondary-bg);
+  color: var(--hint);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--card-shadow);
+}
+
+.vmi-subnav-btn.active {
+  background: var(--accent-gradient);
+  color: #ffffff;
+  box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--accent-a) 65%, transparent);
+}
+
+/* ---------- VMI tables ---------- */
+
+.vmi-table-wrap {
+  overflow-x: auto;
+  border-radius: 16px;
+  background: var(--secondary-bg);
+  box-shadow: var(--card-shadow);
+}
+
+.vmi-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.vmi-table thead th {
+  position: sticky;
+  top: 0;
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--hint);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 12px 14px;
+  background: var(--secondary-bg);
+  border-bottom: 1px solid color-mix(in srgb, var(--hint) 20%, transparent);
+  white-space: nowrap;
+}
+
+.vmi-table tbody td {
+  padding: 11px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--hint) 10%, transparent);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.vmi-table tbody tr:last-child td { border-bottom: none; }
+.vmi-table tbody tr:hover { background: var(--bg); }
+.vmi-table tbody tr:nth-child(even) { background: color-mix(in srgb, var(--hint) 4%, transparent); }
+.vmi-table tbody tr:nth-child(even):hover { background: var(--bg); }
+
+.vmi-table td:first-child, .vmi-table th:first-child {
+  position: sticky;
+  left: 0;
+  background: inherit;
+  white-space: normal;
+}
+
+.vmi-table-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  max-width: 260px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.vmi-table-sku { font-size: 11px; color: var(--hint); margin-top: 1px; }
+
+.vmi-emphasis { font-weight: 700; }
+.vmi-emphasis.danger { color: var(--danger); }
+
+/* Balance-by-payment-method table (dashboard) — just two columns, so it
+   doesn't need the wide min-width the multi-column VMI tables force for
+   horizontal scroll room. */
+.balance-table { min-width: 0; }
+.balance-table th:last-child, .balance-table td:last-child { text-align: right; }
+.balance-percent { font-size: 11px; color: var(--hint); margin-top: 2px; }
+
+/* ---------- VMI summary card ---------- */
+
+.vmi-summary-row {
+  display: flex;
+  gap: 14px;
+}
+
+.vmi-summary-stat {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.vmi-summary-value {
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.vmi-summary-label {
+  font-size: 11px;
+  color: var(--hint);
+  margin-top: 4px;
+  line-height: 1.35;
+}
+
+/* ---------- Product list (store detail) ---------- */
+
+.product-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+
+.product-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--hint) 14%, transparent);
+}
+
+.product-item:last-child { border-bottom: none; }
+
+.product-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+.product-figures {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--hint);
+}
+
+/* ---------- Store detail full panel ---------- */
+
+.store-panel {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: 6vh;
+  background: var(--bg);
+  border-radius: 20px 20px 0 0;
+  transform: translateY(100%);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  z-index: 21;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.store-panel.open { transform: translateY(0); }
+
+.store-panel-header {
+  padding: calc(var(--safe-top) + 16px) 20px 12px;
+  background: var(--bg);
+  border-bottom: 1px solid color-mix(in srgb, var(--hint) 14%, transparent);
+}
+
+.store-panel-header h2 { margin: 0; font-size: 19px; }
+
+.store-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px calc(24px + var(--safe-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Desktop: the store detail is a right-side drawer, not a mobile bottom
+   sheet covering the whole screen — there's plenty of width to spare, and
+   a docked side panel reads as a proper desktop app pattern. */
+@media (min-width: 860px) {
+  .store-panel {
+    left: auto;
+    top: 0;
+    width: 460px;
+    max-width: 90vw;
+    border-radius: 20px 0 0 20px;
+    box-shadow: -12px 0 32px -12px rgba(0, 0, 0, 0.35);
+    transform: translateX(100%);
+  }
+  .store-panel.open { transform: translateX(0); }
+  .store-panel-header { padding-top: 20px; }
+}

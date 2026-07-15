@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,20 +28,29 @@ func NewBuilder(taskStore *tasks.Store, cal *calendar.Client, aiClient *ai.Clien
 	return &Builder{tasks: taskStore, calendar: cal, ai: aiClient, loc: loc, log: log}
 }
 
-// Generate always returns a usable message. If a data source or the AI call
-// fails, it degrades gracefully instead of returning nothing.
-func (b *Builder) Generate(ctx context.Context) string {
-	now := time.Now().In(b.loc)
+// Tile is one stat block on the Mini App dashboard, e.g. an open-task count
+// or (later) a financial figure. Deliberately generic so new tile types
+// (Phase 2: sales, Instagram reach, etc.) slot in without a frontend change.
+type Tile struct {
+	Label string `json:"label"`
+	Value string `json:"value"`
+	Icon  string `json:"icon"`
+}
+
+// fetchData pulls the raw inputs (open tasks, today's calendar events) that
+// both the narrative and the dashboard tiles are built from.
+func (b *Builder) fetchData(ctx context.Context) (now time.Time, openTasks []tasks.Task, events []calendar.Event) {
+	now = time.Now().In(b.loc)
 	dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, b.loc)
 	dayEnd := dayStart.Add(24 * time.Hour)
 
-	openTasks, err := b.tasks.ListOpen(ctx)
+	var err error
+	openTasks, err = b.tasks.ListOpen(ctx)
 	if err != nil {
 		b.log.Warn("summary: failed to load tasks", "err", err)
 		openTasks = nil
 	}
 
-	var events []calendar.Event
 	if b.calendar != nil {
 		events, err = b.calendar.EventsBetween(ctx, dayStart, dayEnd)
 		if err != nil {
@@ -48,7 +58,24 @@ func (b *Builder) Generate(ctx context.Context) string {
 			events = nil
 		}
 	}
+	return now, openTasks, events
+}
 
+// Generate always returns a usable message. If a data source or the AI call
+// fails, it degrades gracefully instead of returning nothing.
+func (b *Builder) Generate(ctx context.Context) string {
+	now, openTasks, events := b.fetchData(ctx)
+	return b.narrative(ctx, now, openTasks, events)
+}
+
+// Tiles computes the dashboard stat blocks. Cheap (no AI call) so the Mini
+// App can refresh them on every load.
+func (b *Builder) Tiles(ctx context.Context) []Tile {
+	now, openTasks, events := b.fetchData(ctx)
+	return buildTiles(now, openTasks, events)
+}
+
+func (b *Builder) narrative(ctx context.Context, now time.Time, openTasks []tasks.Task, events []calendar.Event) string {
 	raw := buildRawContext(now, openTasks, events)
 
 	if b.ai != nil {
@@ -62,52 +89,88 @@ func (b *Builder) Generate(ctx context.Context) string {
 	return plainFallback(now, openTasks, events)
 }
 
+func buildTiles(now time.Time, openTasks []tasks.Task, events []calendar.Event) []Tile {
+	tiles := []Tile{
+		{Label: "Ochiq vazifalar", Value: strconv.Itoa(len(openTasks)), Icon: "tasks"},
+		{Label: "Bugungi tadbirlar", Value: strconv.Itoa(len(events)), Icon: "calendar"},
+	}
+
+	overdue := 0
+	for _, t := range openTasks {
+		if t.DueAt != nil && t.DueAt.Before(now) {
+			overdue++
+		}
+	}
+	if overdue > 0 {
+		tiles = append(tiles, Tile{Label: "Muddati o'tgan", Value: strconv.Itoa(overdue), Icon: "warning"})
+	}
+
+	if next := nextEvent(events, now); next != nil {
+		tiles = append(tiles, Tile{
+			Label: "Keyingi tadbir",
+			Value: fmt.Sprintf("%s — %s", next.Start.In(now.Location()).Format("15:04"), next.Title),
+			Icon:  "clock",
+		})
+	}
+
+	return tiles
+}
+
+func nextEvent(events []calendar.Event, now time.Time) *calendar.Event {
+	for i := range events {
+		if events[i].Start.After(now) {
+			return &events[i]
+		}
+	}
+	return nil
+}
+
 func buildRawContext(now time.Time, openTasks []tasks.Task, events []calendar.Event) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Сегодня: %s\n\n", now.Format("2006-01-02 (Monday)")))
+	sb.WriteString(fmt.Sprintf("Bugun: %s\n\n", now.Format("2006-01-02 (Monday)")))
 
-	sb.WriteString("Открытые задачи:\n")
+	sb.WriteString("Ochiq vazifalar:\n")
 	if len(openTasks) == 0 {
-		sb.WriteString("- нет открытых задач\n")
+		sb.WriteString("- ochiq vazifalar yo'q\n")
 	} else {
 		for _, t := range openTasks {
 			line := fmt.Sprintf("- [#%d] %s", t.ID, t.Description)
 			if t.DueAt != nil {
-				line += fmt.Sprintf(" (срок: %s)", t.DueAt.In(now.Location()).Format("02.01 15:04"))
+				line += fmt.Sprintf(" (muddat: %s)", t.DueAt.In(now.Location()).Format("02.01 15:04"))
 			}
 			sb.WriteString(line + "\n")
 		}
 	}
 
-	sb.WriteString("\nСобытия календаря сегодня:\n")
+	sb.WriteString("\nBugungi taqvim tadbirlari:\n")
 	if len(events) == 0 {
-		sb.WriteString("- событий нет\n")
+		sb.WriteString("- tadbirlar yo'q\n")
 	} else {
 		for _, e := range events {
 			sb.WriteString(fmt.Sprintf("- %s: %s\n", e.Start.In(now.Location()).Format("15:04"), e.Title))
 		}
 	}
 
-	sb.WriteString("\nСоставь короткую дружелюбную сводку на русском на основе этих данных.")
+	sb.WriteString("\nShu ma'lumotlar asosida qisqa, samimiy xulosa tuz (o'zbek tilida, lotin alifbosida).")
 	return sb.String()
 }
 
 func plainFallback(now time.Time, openTasks []tasks.Task, events []calendar.Event) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Сводка на %s\n\n", now.Format("02.01.2006")))
+	sb.WriteString(fmt.Sprintf("%s uchun xulosa\n\n", now.Format("02.01.2006")))
 
-	sb.WriteString("Задачи:\n")
+	sb.WriteString("Vazifalar:\n")
 	if len(openTasks) == 0 {
-		sb.WriteString("нет открытых задач\n")
+		sb.WriteString("ochiq vazifalar yo'q\n")
 	} else {
 		for _, t := range openTasks {
 			sb.WriteString(fmt.Sprintf("- #%d %s\n", t.ID, t.Description))
 		}
 	}
 
-	sb.WriteString("\nКалендарь:\n")
+	sb.WriteString("\nTaqvim:\n")
 	if len(events) == 0 {
-		sb.WriteString("событий нет\n")
+		sb.WriteString("tadbirlar yo'q\n")
 	} else {
 		for _, e := range events {
 			sb.WriteString(fmt.Sprintf("- %s %s\n", e.Start.In(now.Location()).Format("15:04"), e.Title))
