@@ -19,7 +19,10 @@ type Config struct {
 
 	GoogleServiceAccountJSON string // raw JSON content of the service account key
 	GoogleCalendarID         string
-	SpeechLanguageCode       string // BCP-47 code for Google Speech-to-Text, e.g. "uz-UZ"
+	SpeechLanguageCode       string // BCP-47 hint for voice transcription, e.g. "uz-UZ"
+
+	GeminiAPIKey string // optional: enables voice message transcription via Gemini
+	GeminiModel  string
 
 	AnthropicAPIKey string
 	AnthropicModel  string
@@ -52,6 +55,7 @@ func Load() (*Config, error) {
 		GoogleCalendarID:   getEnv("GOOGLE_CALENDAR_ID", "primary"),
 		SpeechLanguageCode: getEnv("SPEECH_LANGUAGE_CODE", "uz-UZ"),
 		AnthropicModel:     getEnv("ANTHROPIC_MODEL", "claude-sonnet-5"),
+		GeminiModel:        getEnv("GEMINI_MODEL", "gemini-2.5-flash"),
 		Timezone:           getEnv("TIMEZONE", "Asia/Tashkent"),
 		ReminderLeadMin:    getEnvInt("REMINDER_LEAD_MINUTES", 30),
 		ReminderIntervalMn: getEnvInt("REMINDER_CHECK_INTERVAL_MINUTES", 15),
@@ -98,6 +102,10 @@ func Load() (*Config, error) {
 	// Optional: without it the agent runs fine, just without calendar
 	// events/reminders (see calendar client init in main.go).
 	cfg.GoogleServiceAccountJSON = os.Getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+
+	// Optional: without it the agent runs fine, just without voice message
+	// transcription (see stt client init in main.go).
+	cfg.GeminiAPIKey = os.Getenv("GEMINI_API_KEY")
 
 	summaryTime := getEnv("SUMMARY_TIME", "08:00")
 	hour, minute, err := parseHHMM(summaryTime)
