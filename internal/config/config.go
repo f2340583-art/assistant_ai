@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -12,7 +13,7 @@ import (
 // Config holds all runtime configuration for the agent.
 type Config struct {
 	TelegramBotToken string
-	TelegramOwnerID  int64
+	TelegramOwnerIDs []int64 // one or more Telegram user IDs allowed to use the bot/Mini App
 
 	DatabaseURL string
 
@@ -70,11 +71,20 @@ func Load() (*Config, error) {
 	if ownerIDStr == "" {
 		return nil, fmt.Errorf("TELEGRAM_OWNER_ID is required")
 	}
-	ownerID, err := strconv.ParseInt(ownerIDStr, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("TELEGRAM_OWNER_ID must be a valid integer: %w", err)
+	for _, part := range strings.Split(ownerIDStr, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		id, err := strconv.ParseInt(part, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("TELEGRAM_OWNER_ID must be a comma-separated list of integers: %w", err)
+		}
+		cfg.TelegramOwnerIDs = append(cfg.TelegramOwnerIDs, id)
 	}
-	cfg.TelegramOwnerID = ownerID
+	if len(cfg.TelegramOwnerIDs) == 0 {
+		return nil, fmt.Errorf("TELEGRAM_OWNER_ID must contain at least one valid integer")
+	}
 
 	if cfg.DatabaseURL == "" {
 		return nil, fmt.Errorf("DATABASE_URL is required")

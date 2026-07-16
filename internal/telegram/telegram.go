@@ -59,27 +59,36 @@ var mainKeyboard = tgbotapi.NewReplyKeyboard(
 	),
 )
 
-// Bot wraps the Telegram API and routes messages from the owner only.
+// Bot wraps the Telegram API and routes messages from allowed owners only.
 type Bot struct {
-	api     *tgbotapi.BotAPI
-	ownerID int64
-	tasks   *tasks.Store
-	summary *summary.Builder
-	ai      *ai.Client
-	stt     *stt.Client // optional: nil disables voice transcription
-	loc     *time.Location
-	log     *slog.Logger
+	api      *tgbotapi.BotAPI
+	ownerIDs []int64
+	tasks    *tasks.Store
+	summary  *summary.Builder
+	ai       *ai.Client
+	stt      *stt.Client // optional: nil disables voice transcription
+	loc      *time.Location
+	log      *slog.Logger
 }
 
-func New(token string, ownerID int64, taskStore *tasks.Store, summaryBuilder *summary.Builder, aiClient *ai.Client, sttClient *stt.Client, loc *time.Location, log *slog.Logger) (*Bot, error) {
+func New(token string, ownerIDs []int64, taskStore *tasks.Store, summaryBuilder *summary.Builder, aiClient *ai.Client, sttClient *stt.Client, loc *time.Location, log *slog.Logger) (*Bot, error) {
 	api, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return nil, fmt.Errorf("connect telegram bot: %w", err)
 	}
 	return &Bot{
-		api: api, ownerID: ownerID, tasks: taskStore, summary: summaryBuilder,
+		api: api, ownerIDs: ownerIDs, tasks: taskStore, summary: summaryBuilder,
 		ai: aiClient, stt: sttClient, loc: loc, log: log,
 	}, nil
+}
+
+func (b *Bot) isOwner(id int64) bool {
+	for _, ownerID := range b.ownerIDs {
+		if ownerID == id {
+			return true
+		}
+	}
+	return false
 }
 
 // RegisterMenuButton points Telegram's chat menu button (the button next to
@@ -101,24 +110,31 @@ func (b *Bot) RegisterMenuButton(webAppURL string) error {
 	if err != nil {
 		return fmt.Errorf("marshal menu button: %w", err)
 	}
-	_, err = b.api.MakeRequest("setChatMenuButton", tgbotapi.Params{
-		"chat_id":     strconv.FormatInt(b.ownerID, 10),
-		"menu_button": string(menuButton),
-	})
-	if err != nil {
-		return fmt.Errorf("set chat menu button: %w", err)
+	for _, ownerID := range b.ownerIDs {
+		_, err = b.api.MakeRequest("setChatMenuButton", tgbotapi.Params{
+			"chat_id":     strconv.FormatInt(ownerID, 10),
+			"menu_button": string(menuButton),
+		})
+		if err != nil {
+			return fmt.Errorf("set chat menu button for %d: %w", ownerID, err)
+		}
 	}
 	return nil
 }
 
-// SendToOwner delivers a message to the owner chat (used for the scheduled
+// SendToOwner delivers a message to every owner chat (used for the scheduled
 // daily summary and calendar reminders), with the quick-action keyboard
 // attached.
 func (b *Bot) SendToOwner(text string) error {
-	msg := tgbotapi.NewMessage(b.ownerID, text)
-	msg.ReplyMarkup = mainKeyboard
-	_, err := b.api.Send(msg)
-	return err
+	var firstErr error
+	for _, ownerID := range b.ownerIDs {
+		msg := tgbotapi.NewMessage(ownerID, text)
+		msg.ReplyMarkup = mainKeyboard
+		if _, err := b.api.Send(msg); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
 }
 
 // Run blocks, processing incoming updates until ctx is cancelled.
@@ -145,7 +161,7 @@ func (b *Bot) Run(ctx context.Context) error {
 }
 
 func (b *Bot) handleMessage(ctx context.Context, msg *tgbotapi.Message) {
-	if msg.From == nil || msg.From.ID != b.ownerID {
+	if msg.From == nil || !b.isOwner(msg.From.ID) {
 		b.log.Warn("telegram: ignoring message from non-owner", "from", msg.From)
 		return
 	}
@@ -169,7 +185,9 @@ func (b *Bot) handleMessage(ctx context.Context, msg *tgbotapi.Message) {
 	if reply == "" {
 		return
 	}
-	if err := b.SendToOwner(reply); err != nil {
+	out := tgbotapi.NewMessage(msg.Chat.ID, reply)
+	out.ReplyMarkup = mainKeyboard
+	if _, err := b.api.Send(out); err != nil {
 		b.log.Error("telegram: failed to send reply", "err", err)
 	}
 }

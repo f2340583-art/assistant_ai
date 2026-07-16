@@ -26,15 +26,24 @@ type Server struct {
 	db       *sql.DB
 	loc      *time.Location
 	botToken string
-	ownerID  int64
+	ownerIDs []int64
 	log      *slog.Logger
 }
 
-func NewServer(taskStore *tasks.Store, summaryBuilder *summary.Builder, billzClient *billz.Client, db *sql.DB, loc *time.Location, botToken string, ownerID int64, log *slog.Logger) *Server {
+func NewServer(taskStore *tasks.Store, summaryBuilder *summary.Builder, billzClient *billz.Client, db *sql.DB, loc *time.Location, botToken string, ownerIDs []int64, log *slog.Logger) *Server {
 	return &Server{
 		tasks: taskStore, summary: summaryBuilder, billz: billzClient, db: db, loc: loc,
-		botToken: botToken, ownerID: ownerID, log: log,
+		botToken: botToken, ownerIDs: ownerIDs, log: log,
 	}
+}
+
+func (s *Server) isOwner(id int64) bool {
+	for _, ownerID := range s.ownerIDs {
+		if ownerID == id {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Server) Handler() http.Handler {
@@ -77,7 +86,7 @@ func (s *Server) withAnyAuth(next http.HandlerFunc) http.HandlerFunc {
 			initData := strings.TrimPrefix(authHeader, "tma ")
 			if initData != "" {
 				userID, err := ValidateInitData(initData, s.botToken)
-				if err == nil && userID == s.ownerID {
+				if err == nil && s.isOwner(userID) {
 					next(w, r)
 					return
 				}

@@ -105,7 +105,7 @@ func run(log *slog.Logger) error {
 
 	summaryBuilder := summary.NewBuilder(taskStore, calClient, aiClient, loc, log)
 
-	bot, err := telegram.New(cfg.TelegramBotToken, cfg.TelegramOwnerID, taskStore, summaryBuilder, aiClient, sttClient, loc, log)
+	bot, err := telegram.New(cfg.TelegramBotToken, cfg.TelegramOwnerIDs, taskStore, summaryBuilder, aiClient, sttClient, loc, log)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func run(log *slog.Logger) error {
 		log.Warn("telegram: failed to register Mini App menu button", "err", err)
 	}
 
-	webServer := webapp.NewServer(taskStore, summaryBuilder, billzClient, database, loc, cfg.TelegramBotToken, cfg.TelegramOwnerID, log)
+	webServer := webapp.NewServer(taskStore, summaryBuilder, billzClient, database, loc, cfg.TelegramBotToken, cfg.TelegramOwnerIDs, log)
 	httpServer := &http.Server{
 		Addr:    ":" + cfg.Port,
 		Handler: webServer.Handler(),
