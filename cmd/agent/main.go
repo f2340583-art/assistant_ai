@@ -82,10 +82,14 @@ func run(log *slog.Logger) error {
 	aiClient := ai.NewClient(cfg.AnthropicAPIKey, cfg.AnthropicModel)
 
 	var sttClient *stt.Client
-	if cfg.GeminiAPIKey != "" {
-		sttClient = stt.NewClient(cfg.GeminiAPIKey, cfg.GeminiModel)
+	if cfg.GoogleServiceAccountJSON != "" {
+		sttClient, err = stt.NewClient(ctx, cfg.GoogleServiceAccountJSON, cfg.SpeechLanguageCode)
+		if err != nil {
+			log.Error("stt: failed to initialize, continuing without voice recognition", "err", err)
+			sttClient = nil
+		}
 	} else {
-		log.Warn("stt: GEMINI_API_KEY not set, running without voice recognition")
+		log.Warn("stt: GOOGLE_SERVICE_ACCOUNT_JSON not set, running without voice recognition")
 	}
 
 	var billzClient *billz.Client
