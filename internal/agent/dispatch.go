@@ -102,13 +102,13 @@ func (a *Agent) dispatchRevenueReport(ctx context.Context, input json.RawMessage
 	}
 	if shopFilter == nil {
 		return fmt.Sprintf("Davr: %s — %s\nSavdo: %s\nTransaksiyalar: %d\nFoyda: %s\nO'rtacha chek: %s",
-			args.StartDate, args.EndDate, fmtMoney(report.GrossSales), report.TransactionsCount,
+			args.StartDate, args.EndDate, fmtMoney(report.NetGrossSales), report.TransactionsCount,
 			fmtMoney(report.GrossProfit), fmtMoney(report.AverageCheque)), nil, false
 	}
 	for _, st := range report.ShopStats {
 		if st.ShopID == *shopFilter {
 			return fmt.Sprintf("Do'kon: %s\nDavr: %s — %s\nSavdo: %s\nTransaksiyalar: %d\nFoyda: %s",
-				st.ShopName, args.StartDate, args.EndDate, fmtMoney(st.GrossSales), st.TransactionsCount, fmtMoney(st.GrossProfit)), nil, false
+				st.ShopName, args.StartDate, args.EndDate, fmtMoney(st.NetGrossSales), st.TransactionsCount, fmtMoney(st.GrossProfit)), nil, false
 		}
 	}
 	return "Bunday do'kon ID topilmadi.", nil, true

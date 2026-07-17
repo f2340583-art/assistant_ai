@@ -81,14 +81,14 @@ func (s *Server) buildBusiness(ctx context.Context) *businessResponse {
 	stores := make([]storeResponse, 0, len(todayReport.ShopStats))
 	for _, st := range todayReport.ShopStats {
 		var share float64
-		if todayReport.GrossSales > 0 {
-			share = st.GrossSales / todayReport.GrossSales * 100
+		if todayReport.NetGrossSales > 0 {
+			share = st.NetGrossSales / todayReport.NetGrossSales * 100
 		}
 		stock := stockByShop[st.ShopID]
 		stores = append(stores, storeResponse{
 			ID:            st.ShopID,
 			Name:          st.ShopName,
-			Revenue:       st.GrossSales,
+			Revenue:       st.NetGrossSales,
 			Transactions:  st.TransactionsCount,
 			AverageCheck:  st.AverageCheque,
 			SharePercent:  share,
@@ -99,7 +99,11 @@ func (s *Server) buildBusiness(ctx context.Context) *businessResponse {
 	sort.Slice(stores, func(i, j int) bool { return stores[i].Revenue > stores[j].Revenue })
 
 	return &businessResponse{
-		TodayRevenue:       todayReport.GrossSales,
+		// NetGrossSales (returns/discounts already netted out) matches what
+		// Billz's own dashboard displays as "Продажи" — GrossSales runs
+		// noticeably higher and would make our numbers look wrong next to
+		// the source of truth.
+		TodayRevenue:       todayReport.NetGrossSales,
 		TodayNetRevenue:    todayReport.NetGrossSales,
 		TodayProfit:        todayReport.GrossProfit,
 		TodayTransactions:  todayReport.TransactionsCount,

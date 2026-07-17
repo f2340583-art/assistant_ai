@@ -57,11 +57,12 @@ func ComparePeriods(ctx context.Context, bz *billz.Client, shopID *string, aStar
 
 // statsFromReport pulls company-wide totals, or (if shopID is non-nil) just
 // that shop's slice of the per-shop breakdown that GeneralReport always
-// includes.
+// includes. Uses NetGrossSales (returns/discounts netted out), not
+// GrossSales — that's what Billz's own dashboard displays as "Продажи".
 func statsFromReport(report *billz.GeneralReport, shopID *string) MonthStats {
 	if shopID == nil {
 		return MonthStats{
-			Revenue:      report.GrossSales,
+			Revenue:      report.NetGrossSales,
 			Transactions: report.TransactionsCount,
 			Profit:       report.GrossProfit,
 		}
@@ -69,7 +70,7 @@ func statsFromReport(report *billz.GeneralReport, shopID *string) MonthStats {
 	for _, st := range report.ShopStats {
 		if st.ShopID == *shopID {
 			return MonthStats{
-				Revenue:      st.GrossSales,
+				Revenue:      st.NetGrossSales,
 				Transactions: st.TransactionsCount,
 				Profit:       st.GrossProfit,
 			}
@@ -171,7 +172,7 @@ func StoreDetail(ctx context.Context, bz *billz.Client, shopID string, now time.
 		days = append(days, dayBucket{date: d, stat: st})
 
 		if !d.Before(thisStart) && !d.After(thisEnd) {
-			thisMonth.Revenue += st.GrossSales
+			thisMonth.Revenue += st.NetGrossSales
 			thisMonth.Transactions += st.TransactionsCount
 			thisMonth.Profit += st.GrossProfit
 		}
@@ -185,7 +186,7 @@ func StoreDetail(ctx context.Context, bz *billz.Client, shopID string, now time.
 	for _, db := range days[start:] {
 		resp.DailyTrend = append(resp.DailyTrend, DailyPoint{
 			Date:    db.date.Format("02.01"),
-			Revenue: db.stat.GrossSales,
+			Revenue: db.stat.NetGrossSales,
 		})
 	}
 
@@ -204,7 +205,7 @@ func StoreDetail(ctx context.Context, bz *billz.Client, shopID string, now time.
 		}
 		lastYear := MonthStats{
 			Label:        lastStart.Format("02.01.06") + " – " + lastEnd.Format("02.01.06"),
-			Revenue:      shopStat.GrossSales,
+			Revenue:      shopStat.NetGrossSales,
 			Transactions: shopStat.TransactionsCount,
 			Profit:       shopStat.GrossProfit,
 		}
@@ -287,7 +288,7 @@ func Forecast(ctx context.Context, bz *billz.Client, shopIDs []string, now time.
 		if perr != nil {
 			continue
 		}
-		dailyTotals[d.Format("2006-01-02")] += row.GrossSales
+		dailyTotals[d.Format("2006-01-02")] += row.NetGrossSales
 	}
 
 	var weekdaySum [7]float64
@@ -337,9 +338,9 @@ func Forecast(ctx context.Context, bz *billz.Client, shopIDs []string, now time.
 	lastYearMonthEnd := lastYearMonthStart.AddDate(0, 1, -1)
 	if lastYearReport, err := bz.GeneralReport(ctx, lastYearMonthStart.Format("2006-01-02"), lastYearMonthEnd.Format("2006-01-02")); err != nil {
 		log.Warn("reports: forecast last year report failed", "err", err)
-	} else if lastYearReport.GrossSales > 0 {
-		resp.LastYearTotal = lastYearReport.GrossSales
-		pct := (projected - lastYearReport.GrossSales) / lastYearReport.GrossSales * 100
+	} else if lastYearReport.NetGrossSales > 0 {
+		resp.LastYearTotal = lastYearReport.NetGrossSales
+		pct := (projected - lastYearReport.NetGrossSales) / lastYearReport.NetGrossSales * 100
 		resp.ChangePercent = &pct
 	}
 
