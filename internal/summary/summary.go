@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -130,17 +131,7 @@ func buildRawContext(now time.Time, openTasks []tasks.Task, events []calendar.Ev
 	sb.WriteString(fmt.Sprintf("Bugun: %s\n\n", now.Format("2006-01-02 (Monday)")))
 
 	sb.WriteString("Ochiq vazifalar:\n")
-	if len(openTasks) == 0 {
-		sb.WriteString("- ochiq vazifalar yo'q\n")
-	} else {
-		for _, t := range openTasks {
-			line := fmt.Sprintf("- [#%d] %s", t.ID, t.Description)
-			if t.DueAt != nil {
-				line += fmt.Sprintf(" (muddat: %s)", t.DueAt.In(now.Location()).Format("02.01 15:04"))
-			}
-			sb.WriteString(line + "\n")
-		}
-	}
+	sb.WriteString(formatTasksGrouped(openTasks, now.Location()))
 
 	sb.WriteString("\nBugungi taqvim tadbirlari:\n")
 	if len(events) == 0 {
@@ -160,13 +151,7 @@ func plainFallback(now time.Time, openTasks []tasks.Task, events []calendar.Even
 	sb.WriteString(fmt.Sprintf("%s uchun xulosa\n\n", now.Format("02.01.2006")))
 
 	sb.WriteString("Vazifalar:\n")
-	if len(openTasks) == 0 {
-		sb.WriteString("ochiq vazifalar yo'q\n")
-	} else {
-		for _, t := range openTasks {
-			sb.WriteString(fmt.Sprintf("- #%d %s\n", t.ID, t.Description))
-		}
-	}
+	sb.WriteString(formatTasksGrouped(openTasks, now.Location()))
 
 	sb.WriteString("\nTaqvim:\n")
 	if len(events) == 0 {
@@ -177,5 +162,46 @@ func plainFallback(now time.Time, openTasks []tasks.Task, events []calendar.Even
 		}
 	}
 
+	return sb.String()
+}
+
+// formatTasksGrouped renders open tasks with a due time first, sorted
+// chronologically and grouped under an hour heading whenever the hour
+// changes, followed by tasks with no due time under a separate heading.
+// Shared by buildRawContext (fed to Claude) and plainFallback (shipped
+// as-is when Claude/network fails), so both need correctly organized
+// input — plainFallback has no AI massaging to fix it up afterward.
+func formatTasksGrouped(openTasks []tasks.Task, loc *time.Location) string {
+	if len(openTasks) == 0 {
+		return "- ochiq vazifalar yo'q\n"
+	}
+
+	var timed, untimed []tasks.Task
+	for _, t := range openTasks {
+		if t.DueAt != nil {
+			timed = append(timed, t)
+		} else {
+			untimed = append(untimed, t)
+		}
+	}
+	sort.SliceStable(timed, func(i, j int) bool { return timed[i].DueAt.Before(*timed[j].DueAt) })
+
+	var sb strings.Builder
+	lastHour := ""
+	for _, t := range timed {
+		hour := t.DueAt.In(loc).Format("02.01 15:00")
+		if hour != lastHour {
+			sb.WriteString(hour + ":\n")
+			lastHour = hour
+		}
+		sb.WriteString(fmt.Sprintf("- [#%d] %s\n", t.ID, t.Description))
+	}
+
+	if len(untimed) > 0 {
+		sb.WriteString("Vaqti belgilanmagan vazifalar:\n")
+		for _, t := range untimed {
+			sb.WriteString(fmt.Sprintf("- [#%d] %s\n", t.ID, t.Description))
+		}
+	}
 	return sb.String()
 }

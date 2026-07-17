@@ -16,6 +16,7 @@ import (
 
 	_ "time/tzdata" // embed the IANA tz database so LoadLocation never depends on the OS/container image having it installed
 
+	"fahriddin-ai/internal/agent"
 	"fahriddin-ai/internal/ai"
 	"fahriddin-ai/internal/billz"
 	"fahriddin-ai/internal/calendar"
@@ -105,7 +106,9 @@ func run(log *slog.Logger) error {
 
 	summaryBuilder := summary.NewBuilder(taskStore, calClient, aiClient, loc, log)
 
-	bot, err := telegram.New(cfg.TelegramBotToken, cfg.TelegramOwnerIDs, taskStore, summaryBuilder, aiClient, sttClient, loc, log)
+	agentClient := agent.New(cfg.AnthropicAPIKey, cfg.AnthropicModel, billzClient, taskStore, summaryBuilder, database, loc, log)
+
+	bot, err := telegram.New(cfg.TelegramBotToken, cfg.TelegramOwnerIDs, taskStore, summaryBuilder, agentClient, sttClient, loc, log)
 	if err != nil {
 		return err
 	}
