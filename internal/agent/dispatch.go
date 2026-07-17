@@ -45,6 +45,8 @@ func (a *Agent) dispatchTool(ctx context.Context, name string, input json.RawMes
 		return a.dispatchListTasks(ctx)
 	case "complete_task":
 		return a.dispatchCompleteTask(ctx, input)
+	case "delete_task":
+		return a.dispatchDeleteTask(ctx, input)
 	case "get_daily_summary":
 		return a.summary.Generate(ctx), nil, false
 	case "generate_excel_report":
@@ -478,6 +480,17 @@ func (a *Agent) dispatchCompleteTask(ctx context.Context, input json.RawMessage)
 		return fmt.Sprintf("#%d raqamli vazifa topilmadi yoki allaqachon bajarilgan.", args.TaskID), nil, true
 	}
 	return fmt.Sprintf("#%d vazifa bajarilgan deb belgilandi.", args.TaskID), nil, false
+}
+
+func (a *Agent) dispatchDeleteTask(ctx context.Context, input json.RawMessage) (string, *Attachment, bool) {
+	var args completeTaskArgs
+	if err := unmarshalArgs(input, &args); err != nil || args.TaskID == 0 {
+		return "Vazifa raqami ko'rsatilmagan.", nil, true
+	}
+	if err := a.tasks.Delete(ctx, args.TaskID); err != nil {
+		return fmt.Sprintf("#%d raqamli vazifa topilmadi.", args.TaskID), nil, true
+	}
+	return fmt.Sprintf("#%d vazifa butunlay o'chirildi.", args.TaskID), nil, false
 }
 
 type generateExcelArgs struct {

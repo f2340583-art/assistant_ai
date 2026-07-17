@@ -130,7 +130,12 @@ var (
 		tool("list_tasks", "Ochiq vazifalar ro'yxatini beradi.", map[string]any{}, nil),
 
 		tool("complete_task",
-			"Vazifani bajarilgan deb belgilaydi.",
+			"Vazifani bajarilgan deb belgilaydi (vazifa saqlanadi, faqat 'bajarildi' deb belgilanadi).",
+			map[string]any{"task_id": map[string]any{"type": "integer", "description": "Vazifa raqami"}},
+			[]string{"task_id"}),
+
+		tool("delete_task",
+			"Vazifani butunlay o'chiradi (masalan xato qo'shilgan bo'lsa) — complete_task'dan farqli o'laroq, vazifa bazadan butunlay o'chadi va qaytarib bo'lmaydi.",
 			map[string]any{"task_id": map[string]any{"type": "integer", "description": "Vazifa raqami"}},
 			[]string{"task_id"}),
 

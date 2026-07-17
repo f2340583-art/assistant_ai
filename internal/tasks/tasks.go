@@ -81,3 +81,21 @@ func (s *Store) Complete(ctx context.Context, id int64) error {
 	}
 	return nil
 }
+
+// Delete permanently removes a task (e.g. one added by mistake), unlike
+// Complete which just marks it done. Returns sql.ErrNoRows if the task
+// doesn't exist.
+func (s *Store) Delete(ctx context.Context, id int64) error {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM tasks WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete task: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("delete task: %w", err)
+	}
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
